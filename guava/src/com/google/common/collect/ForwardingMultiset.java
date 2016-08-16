@@ -41,6 +41,10 @@ import javax.annotation.Nullable;
  * your own implementation, or delegating to the provided {@code standardAdd}
  * method.
  *
+ * <p><b>{@code default} method warning:</b> This class does <i>not</i> forward calls to {@code
+ * default} methods. Instead, it inherits their default implementations. When those implementations
+ * invoke methods, they invoke methods on the {@code ForwardingMultiset}.
+ *
  * <p>The {@code standard} methods and any collection views they return are not
  * guaranteed to be thread-safe, even when all of the methods that they depend
  * on are thread-safe.
@@ -285,9 +289,9 @@ public abstract class ForwardingMultiset<E> extends ForwardingCollection<E> impl
   }
 
   /**
-   * A sensible, albeit inefficient, definition of {@link #size} in terms of
+   * A sensible, albeit inefficient, definition of {@link #equals} in terms of
    * {@code entrySet().size()} and {@link #count}. If you override either of
-   * these methods, you may wish to override {@link #size} to forward to this
+   * these methods, you may wish to override {@link #equals} to forward to this
    * implementation.
    *
    * @since 7.0

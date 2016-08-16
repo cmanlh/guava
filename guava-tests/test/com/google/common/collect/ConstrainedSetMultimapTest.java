@@ -23,12 +23,10 @@ import com.google.common.collect.testing.features.CollectionSize;
 import com.google.common.collect.testing.features.MapFeature;
 import com.google.common.collect.testing.google.SetMultimapTestSuiteBuilder;
 import com.google.common.collect.testing.google.TestStringSetMultimapGenerator;
-
-import junit.framework.Test;
-import junit.framework.TestCase;
-
 import java.io.Serializable;
 import java.util.Map.Entry;
+import junit.framework.Test;
+import junit.framework.TestCase;
 
 /**
  * Tests for {@link MapConstraints#constrainedSetMultimap} not accounted for in
@@ -39,18 +37,18 @@ import java.util.Map.Entry;
 public class ConstrainedSetMultimapTest extends TestCase {
   private enum Constraint implements Serializable, MapConstraint<String, String> {
     INSTANCE;
-    
+
     @Override
     public void checkKeyValue(String key, String value) {
       checkArgument(!"test".equals(key));
       checkArgument(!"test".equals(value));
     }
   }
-  
+
   public static Test suite() {
     return SetMultimapTestSuiteBuilder.using(
         new TestStringSetMultimapGenerator() {
-          
+
           @Override
           protected SetMultimap<String, String> create(Entry<String, String>[] entries) {
             SetMultimap<String, String> multimap = HashMultimap.create();

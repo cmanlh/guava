@@ -411,6 +411,26 @@ public final class MediaType {
   public static final MediaType MICROSOFT_POWERPOINT =
       createConstant(APPLICATION_TYPE, "vnd.ms-powerpoint");
   public static final MediaType MICROSOFT_WORD = createConstant(APPLICATION_TYPE, "msword");
+
+  /**
+   * Media type for NaCl applications. For more information see
+   * <a href="https://developer.chrome.com/native-client/devguide/coding/application-structure">
+   * the Developer Guide for Native Client Application Structure</a>.
+   *
+   * @since 20.0
+   */
+  public static final MediaType NACL_APPLICATION = createConstant(APPLICATION_TYPE, "x-nacl");
+
+  /**
+   * Media type for NaCl portable applications. For more information see
+   * <a href="https://developer.chrome.com/native-client/devguide/coding/application-structure">
+   * the Developer Guide for Native Client Application Structure</a>.
+   *
+   * @since 20.0
+   */
+  public static final MediaType NACL_PORTABLE_APPLICATION =
+      createConstant(APPLICATION_TYPE, "x-pnacl");
+
   public static final MediaType OCTET_STREAM = createConstant(APPLICATION_TYPE, "octet-stream");
   public static final MediaType OGG_CONTAINER = createConstant(APPLICATION_TYPE, "ogg");
   public static final MediaType OOXML_DOCUMENT =
@@ -475,6 +495,13 @@ public final class MediaType {
    * @since 17.0
    */
   public static final MediaType WOFF = createConstant(APPLICATION_TYPE, "font-woff");
+  /**
+   * Media type for the <a href="http://en.wikipedia.org/wiki/Web_Open_Font_Format">Web Open Font
+   * Format</a> (WOFF) version 2 <a href="https://www.w3.org/TR/WOFF2/">defined</a> by the W3C.
+   *
+   * @since 20.0
+   */
+  public static final MediaType WOFF2 = createConstant(APPLICATION_TYPE, "font-woff2");
   public static final MediaType XHTML_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "xhtml+xml");
   /**
    * Media type for Extensible Resource Descriptors. This is not yet registered with the IANA, but
@@ -736,6 +763,7 @@ public final class MediaType {
       String subtype = tokenizer.consumeToken(TOKEN_MATCHER);
       ImmutableListMultimap.Builder<String, String> parameters = ImmutableListMultimap.builder();
       while (tokenizer.hasMore()) {
+        tokenizer.consumeTokenIfPresent(LINEAR_WHITE_SPACE);
         tokenizer.consumeCharacter(';');
         tokenizer.consumeTokenIfPresent(LINEAR_WHITE_SPACE);
         String attribute = tokenizer.consumeToken(TOKEN_MATCHER);

@@ -109,13 +109,8 @@ public final class Iterators {
    *
    * <p>The {@link Iterable} equivalent of this method is {@link
    * ImmutableSet#of()}.
-   *
-   * @deprecated Use {@code ImmutableSet.<T>of().iterator()} instead; or for
-   *     Java 7 or later, {@link Collections#emptyIterator}. This method is
-   *     scheduled for removal in May 2016.
    */
-  @Deprecated
-  public static <T> UnmodifiableIterator<T> emptyIterator() {
+  static <T> UnmodifiableIterator<T> emptyIterator() {
     return emptyListIterator();
   }
 
@@ -317,10 +312,9 @@ public final class Iterators {
       return first;
     }
 
-    StringBuilder sb = new StringBuilder();
-    sb.append("expected one element but was: <" + first);
+    StringBuilder sb = new StringBuilder().append("expected one element but was: <").append(first);
     for (int i = 0; i < 4 && iterator.hasNext(); i++) {
-      sb.append(", " + iterator.next());
+      sb.append(", ").append(iterator.next());
     }
     if (iterator.hasNext()) {
       sb.append(", ...");

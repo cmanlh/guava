@@ -19,6 +19,7 @@ package com.google.common.collect;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.Lists;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,9 +40,9 @@ import javax.annotation.Nullable;
 @SuppressWarnings("serial") // we're overriding default serialization
 public abstract class ImmutableList<E> extends ImmutableCollection<E>
     implements List<E>, RandomAccess {
-  static final ImmutableList<Object> EMPTY = 
+  static final ImmutableList<Object> EMPTY =
       new RegularImmutableList<Object>(Collections.emptyList());
-  
+
   ImmutableList() {}
 
   // Casting to any type is safe because the list will never hold any elements.
@@ -285,22 +286,26 @@ public abstract class ImmutableList<E> extends ImmutableCollection<E>
       contents = Lists.newArrayListWithCapacity(capacity);
     }
 
+    @CanIgnoreReturnValue
     @Override public Builder<E> add(E element) {
       contents.add(checkNotNull(element));
       return this;
     }
 
+    @CanIgnoreReturnValue
     @Override public Builder<E> addAll(Iterable<? extends E> elements) {
       super.addAll(elements);
       return this;
     }
 
+    @CanIgnoreReturnValue
     @Override public Builder<E> add(E... elements) {
       checkNotNull(elements);  // for GWT
       super.add(elements);
       return this;
     }
 
+    @CanIgnoreReturnValue
     @Override public Builder<E> addAll(Iterator<? extends E> elements) {
       super.addAll(elements);
       return this;
