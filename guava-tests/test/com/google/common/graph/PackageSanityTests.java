@@ -32,7 +32,7 @@ public class PackageSanityTests extends AbstractPackageSanityTests {
   private static final AbstractGraphBuilder<?> GRAPH_BUILDER_A =
       GraphBuilder.directed().expectedNodeCount(10);
   private static final AbstractGraphBuilder<?> GRAPH_BUILDER_B =
-      ValueGraphBuilder.directed().allowsSelfLoops(false).expectedNodeCount(16);
+      ValueGraphBuilder.directed().allowsSelfLoops(true).expectedNodeCount(16);
 
   private static final ImmutableGraph<String> IMMUTABLE_GRAPH_A = graphWithNode("A");
   private static final ImmutableGraph<String> IMMUTABLE_GRAPH_B = graphWithNode("B");
@@ -40,7 +40,7 @@ public class PackageSanityTests extends AbstractPackageSanityTests {
   private static final NetworkBuilder<?, ?> NETWORK_BUILDER_A =
       NetworkBuilder.directed().allowsParallelEdges(true).expectedNodeCount(10);
   private static final NetworkBuilder<?, ?> NETWORK_BUILDER_B =
-      NetworkBuilder.directed().allowsSelfLoops(false).expectedNodeCount(16);
+      NetworkBuilder.directed().allowsSelfLoops(true).expectedNodeCount(16);
 
   private static final ImmutableNetwork<String, String> IMMUTABLE_NETWORK_A = networkWithNode("A");
   private static final ImmutableNetwork<String, String> IMMUTABLE_NETWORK_B = networkWithNode("B");
@@ -58,7 +58,8 @@ public class PackageSanityTests extends AbstractPackageSanityTests {
       super.testNulls();
     } catch (AssertionFailedError e) {
       assertWithMessage("Method did not throw null pointer OR element not in graph exception.")
-          .that(e.getCause().getMessage()).contains(AbstractNetworkTest.ERROR_ELEMENT_NOT_IN_GRAPH);
+          .that(e.getCause().getMessage())
+          .contains(AbstractNetworkTest.ERROR_ELEMENT_NOT_IN_GRAPH);
     }
   }
 

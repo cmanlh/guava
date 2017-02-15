@@ -16,6 +16,7 @@
 
 package com.google.common.graph;
 
+import static com.google.common.graph.TestUtil.assertStronglyEquivalent;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.fail;
 
@@ -24,9 +25,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/**
- * Tests for {@link ConfigurableMutableValueGraph} and related functionality.
- */
+/** Tests for {@link ConfigurableMutableValueGraph} and related functionality. */
 // TODO(user): Expand coverage and move to proper test suite.
 @RunWith(JUnit4.class)
 public final class ValueGraphTest {
@@ -34,11 +33,35 @@ public final class ValueGraphTest {
 
   @After
   public void validateGraphState() {
-    AbstractGraphTest.validateGraph(graph);
+    assertStronglyEquivalent(graph, Graphs.copyOf(graph));
+    assertStronglyEquivalent(graph, ImmutableValueGraph.copyOf(graph));
+
+    Graph<Integer> asGraph = graph.asGraph();
+    AbstractGraphTest.validateGraph(asGraph);
+    assertThat(graph.nodes()).isEqualTo(asGraph.nodes());
+    assertThat(graph.edges()).isEqualTo(asGraph.edges());
+    assertThat(graph.nodeOrder()).isEqualTo(asGraph.nodeOrder());
+    assertThat(graph.isDirected()).isEqualTo(asGraph.isDirected());
+    assertThat(graph.allowsSelfLoops()).isEqualTo(asGraph.allowsSelfLoops());
+
+    for (Integer node : graph.nodes()) {
+      assertThat(graph.adjacentNodes(node)).isEqualTo(asGraph.adjacentNodes(node));
+      assertThat(graph.predecessors(node)).isEqualTo(asGraph.predecessors(node));
+      assertThat(graph.successors(node)).isEqualTo(asGraph.successors(node));
+      assertThat(graph.degree(node)).isEqualTo(asGraph.degree(node));
+      assertThat(graph.inDegree(node)).isEqualTo(asGraph.inDegree(node));
+      assertThat(graph.outDegree(node)).isEqualTo(asGraph.outDegree(node));
+
+      for (Integer otherNode : graph.nodes()) {
+        boolean hasEdge = graph.hasEdge(node, otherNode);
+        assertThat(hasEdge).isEqualTo(asGraph.hasEdge(node, otherNode));
+        assertThat(graph.edgeValueOrDefault(node, otherNode, null) != null).isEqualTo(hasEdge);
+      }
+    }
   }
 
   @Test
-  public void directedValueGraph() {
+  public void directedGraph() {
     graph = ValueGraphBuilder.directed().allowsSelfLoops(true).build();
     graph.putEdgeValue(1, 2, "valueA");
     graph.putEdgeValue(2, 1, "valueB");
@@ -49,11 +72,16 @@ public final class ValueGraphTest {
     assertThat(graph.edgeValue(2, 1)).isEqualTo("valueB");
     assertThat(graph.edgeValue(2, 3)).isEqualTo("valueC");
     assertThat(graph.edgeValue(4, 4)).isEqualTo("valueD");
-    assertThat(graph).isEqualTo(ImmutableValueGraph.copyOf(graph));
+
+    String toString = graph.toString();
+    assertThat(toString).contains("valueA");
+    assertThat(toString).contains("valueB");
+    assertThat(toString).contains("valueC");
+    assertThat(toString).contains("valueD");
   }
 
   @Test
-  public void undirectedValueGraph() {
+  public void undirectedGraph() {
     graph = ValueGraphBuilder.undirected().allowsSelfLoops(true).build();
     graph.putEdgeValue(1, 2, "valueA");
     graph.putEdgeValue(2, 1, "valueB"); // overwrites valueA in undirected case
@@ -64,7 +92,12 @@ public final class ValueGraphTest {
     assertThat(graph.edgeValue(2, 1)).isEqualTo("valueB");
     assertThat(graph.edgeValue(2, 3)).isEqualTo("valueC");
     assertThat(graph.edgeValue(4, 4)).isEqualTo("valueD");
-    assertThat(graph).isEqualTo(ImmutableValueGraph.copyOf(graph));
+
+    String toString = graph.toString();
+    assertThat(toString).doesNotContain("valueA");
+    assertThat(toString).contains("valueB");
+    assertThat(toString).contains("valueC");
+    assertThat(toString).contains("valueD");
   }
 
   @Test
@@ -75,7 +108,6 @@ public final class ValueGraphTest {
     assertThat(graph.putEdgeValue(2, 1, "valueB")).isNull();
     assertThat(graph.putEdgeValue(1, 2, "valueC")).isEqualTo("valueA");
     assertThat(graph.putEdgeValue(2, 1, "valueD")).isEqualTo("valueB");
-    assertThat(graph).isEqualTo(ImmutableValueGraph.copyOf(graph));
   }
 
   @Test
@@ -86,7 +118,6 @@ public final class ValueGraphTest {
     assertThat(graph.putEdgeValue(2, 1, "valueB")).isEqualTo("valueA");
     assertThat(graph.putEdgeValue(1, 2, "valueC")).isEqualTo("valueB");
     assertThat(graph.putEdgeValue(2, 1, "valueD")).isEqualTo("valueC");
-    assertThat(graph).isEqualTo(ImmutableValueGraph.copyOf(graph));
   }
 
   @Test
@@ -102,7 +133,6 @@ public final class ValueGraphTest {
     assertThat(graph.removeEdge(2, 1)).isNull();
     assertThat(graph.removeEdge(2, 3)).isEqualTo("valueC");
     assertThat(graph.removeEdge(2, 3)).isNull();
-    assertThat(graph).isEqualTo(ImmutableValueGraph.copyOf(graph));
   }
 
   @Test
@@ -117,7 +147,6 @@ public final class ValueGraphTest {
     assertThat(graph.removeEdge(2, 1)).isNull();
     assertThat(graph.removeEdge(2, 3)).isEqualTo("valueC");
     assertThat(graph.removeEdge(2, 3)).isNull();
-    assertThat(graph).isEqualTo(ImmutableValueGraph.copyOf(graph));
   }
 
   @Test
@@ -151,8 +180,6 @@ public final class ValueGraphTest {
   public void edgeValueOrDefault() {
     graph = ValueGraphBuilder.directed().build();
 
-    graph.addNode(1);
-    graph.addNode(2);
     assertThat(graph.edgeValueOrDefault(1, 2, "default")).isEqualTo("default");
     assertThat(graph.edgeValueOrDefault(2, 1, "default")).isEqualTo("default");
 
@@ -165,5 +192,18 @@ public final class ValueGraphTest {
     graph.putEdgeValue(2, 1, "valueC");
     assertThat(graph.edgeValueOrDefault(1, 2, "default")).isEqualTo("default");
     assertThat(graph.edgeValueOrDefault(2, 1, "default")).isEqualTo("valueC");
+  }
+
+  @Test
+  public void equivalence_considersEdgeValue() {
+    graph = ValueGraphBuilder.undirected().build();
+    graph.putEdgeValue(1, 2, "valueA");
+
+    MutableValueGraph<Integer, String> otherGraph = ValueGraphBuilder.undirected().build();
+    otherGraph.putEdgeValue(1, 2, "valueA");
+    assertThat(graph).isEqualTo(otherGraph);
+
+    otherGraph.putEdgeValue(1, 2, "valueB");
+    assertThat(graph).isNotEqualTo(otherGraph); // values differ
   }
 }

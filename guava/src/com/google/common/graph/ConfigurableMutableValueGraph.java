@@ -38,12 +38,10 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
  * @param <N> Node parameter type
  * @param <V> Value parameter type
  */
-final class ConfigurableMutableValueGraph<N, V>
-    extends AbstractConfigurableValueGraph<N, V> implements MutableValueGraph<N, V> {
+final class ConfigurableMutableValueGraph<N, V> extends ConfigurableValueGraph<N, V>
+    implements MutableValueGraph<N, V> {
 
-  /**
-   * Constructs a mutable graph with the properties specified in {@code builder}.
-   */
+  /** Constructs a mutable graph with the properties specified in {@code builder}. */
   ConfigurableMutableValueGraph(AbstractGraphBuilder<? super N> builder) {
     super(builder);
   }
@@ -75,26 +73,25 @@ final class ConfigurableMutableValueGraph<N, V>
 
   @Override
   @CanIgnoreReturnValue
-  public V putEdgeValue(N nodeA, N nodeB, V value) {
-    checkNotNull(nodeA, "nodeA");
-    checkNotNull(nodeB, "nodeB");
+  public V putEdgeValue(N nodeU, N nodeV, V value) {
+    checkNotNull(nodeU, "nodeU");
+    checkNotNull(nodeV, "nodeV");
     checkNotNull(value, "value");
 
-    GraphConnections<N, V> connectionsA = nodeConnections.get(nodeA);
-    boolean isSelfLoop = nodeA.equals(nodeB);
     if (!allowsSelfLoops()) {
-      checkArgument(!isSelfLoop, SELF_LOOPS_NOT_ALLOWED, nodeA);
+      checkArgument(!nodeU.equals(nodeV), SELF_LOOPS_NOT_ALLOWED, nodeU);
     }
 
-    if (connectionsA == null) {
-      connectionsA = addNodeInternal(nodeA);
+    GraphConnections<N, V> connectionsU = nodeConnections.get(nodeU);
+    if (connectionsU == null) {
+      connectionsU = addNodeInternal(nodeU);
     }
-    V previousValue = connectionsA.addSuccessor(nodeB, value);
-    GraphConnections<N, V> connectionsB = nodeConnections.get(nodeB);
-    if (connectionsB == null) {
-      connectionsB = addNodeInternal(nodeB);
+    V previousValue = connectionsU.addSuccessor(nodeV, value);
+    GraphConnections<N, V> connectionsV = nodeConnections.get(nodeV);
+    if (connectionsV == null) {
+      connectionsV = addNodeInternal(nodeV);
     }
-    connectionsB.addPredecessor(nodeA, value);
+    connectionsV.addPredecessor(nodeU, value);
     if (previousValue == null) {
       checkPositive(++edgeCount);
     }
@@ -136,19 +133,19 @@ final class ConfigurableMutableValueGraph<N, V>
 
   @Override
   @CanIgnoreReturnValue
-  public V removeEdge(Object nodeA, Object nodeB) {
-    checkNotNull(nodeA, "nodeA");
-    checkNotNull(nodeB, "nodeB");
+  public V removeEdge(Object nodeU, Object nodeV) {
+    checkNotNull(nodeU, "nodeU");
+    checkNotNull(nodeV, "nodeV");
 
-    GraphConnections<N, V> connectionsA = nodeConnections.get(nodeA);
-    GraphConnections<N, V> connectionsB = nodeConnections.get(nodeB);
-    if (connectionsA == null || connectionsB == null) {
+    GraphConnections<N, V> connectionsU = nodeConnections.get(nodeU);
+    GraphConnections<N, V> connectionsV = nodeConnections.get(nodeV);
+    if (connectionsU == null || connectionsV == null) {
       return null;
     }
 
-    V previousValue = connectionsA.removeSuccessor(nodeB);
+    V previousValue = connectionsU.removeSuccessor(nodeV);
     if (previousValue != null) {
-      connectionsB.removePredecessor(nodeA);
+      connectionsV.removePredecessor(nodeU);
       checkNonNegative(--edgeCount);
     }
     return previousValue;

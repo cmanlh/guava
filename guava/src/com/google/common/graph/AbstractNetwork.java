@@ -17,20 +17,25 @@
 package com.google.common.graph;
 
 import static com.google.common.graph.GraphConstants.GRAPH_STRING_FORMAT;
+import static com.google.common.graph.GraphConstants.MULTIPLE_EDGES_CONNECTING;
 
 import com.google.common.annotations.Beta;
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import com.google.common.math.IntMath;
 import java.util.AbstractSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
 
 /**
  * This class provides a skeletal implementation of {@link Network}. It is recommended to extend
- * this class rather than implement {@link Network} directly, to ensure consistent
- * {@link #equals(Object)} and {@link #hashCode()} results across different network implementations.
+ * this class rather than implement {@link Network} directly.
  *
  * @author James Sexton
  * @param <N> Node parameter type
@@ -49,20 +54,20 @@ public abstract class AbstractNetwork<N, E> implements Network<N, E> {
       }
 
       @Override
-      public Set<Endpoints<N>> edges() {
+      public Set<EndpointPair<N>> edges() {
         if (allowsParallelEdges()) {
           return super.edges(); // Defer to AbstractGraph implementation.
         }
 
-        // Optimized implementation assumes no parallel edges (1:1 edge to Endpoints mapping).
-        return new AbstractSet<Endpoints<N>>() {
+        // Optimized implementation assumes no parallel edges (1:1 edge to EndpointPair mapping).
+        return new AbstractSet<EndpointPair<N>>() {
           @Override
-          public Iterator<Endpoints<N>> iterator() {
+          public Iterator<EndpointPair<N>> iterator() {
             return Iterators.transform(
                 AbstractNetwork.this.edges().iterator(),
-                new Function<E, Endpoints<N>>() {
+                new Function<E, EndpointPair<N>>() {
                   @Override
-                  public Endpoints<N> apply(E edge) {
+                  public EndpointPair<N> apply(E edge) {
                     return incidentNodes(edge);
                   }
                 });
@@ -74,13 +79,14 @@ public abstract class AbstractNetwork<N, E> implements Network<N, E> {
           }
 
           @Override
-          public boolean contains(Object obj) {
-            if (!(obj instanceof Endpoints)) {
+          public boolean contains(@Nullable Object obj) {
+            if (!(obj instanceof EndpointPair)) {
               return false;
             }
-            Endpoints<?> endpoints = (Endpoints<?>) obj;
-            return isDirected() == endpoints.isDirected()
-                && !edgesConnecting(endpoints.nodeA(), endpoints.nodeB()).isEmpty();
+            EndpointPair<?> endpointPair = (EndpointPair<?>) obj;
+            return isDirected() == endpointPair.isOrdered()
+                && nodes().contains(endpointPair.nodeU())
+                && successors(endpointPair.nodeU()).contains(endpointPair.nodeV());
           }
         };
       }
@@ -114,11 +120,53 @@ public abstract class AbstractNetwork<N, E> implements Network<N, E> {
       public Set<N> successors(Object node) {
         return AbstractNetwork.this.successors(node);
       }
+
+      // DO NOT override the AbstractGraph *degree() implementations.
     };
   }
 
   @Override
-  public boolean equals(@Nullable Object obj) {
+  public int degree(Object node) {
+    if (isDirected()) {
+      return IntMath.saturatedAdd(inEdges(node).size(), outEdges(node).size());
+    } else {
+      return IntMath.saturatedAdd(incidentEdges(node).size(), edgesConnecting(node, node).size());
+    }
+  }
+
+  @Override
+  public int inDegree(Object node) {
+    return isDirected() ? inEdges(node).size() : degree(node);
+  }
+
+  @Override
+  public int outDegree(Object node) {
+    return isDirected() ? outEdges(node).size() : degree(node);
+  }
+
+  @Override
+  public Set<E> adjacentEdges(Object edge) {
+    EndpointPair<?> endpointPair = incidentNodes(edge); // Verifies that edge is in this network.
+    Set<E> endpointPairIncidentEdges =
+        Sets.union(incidentEdges(endpointPair.nodeU()), incidentEdges(endpointPair.nodeV()));
+    return Sets.difference(endpointPairIncidentEdges, ImmutableSet.of(edge));
+  }
+
+  @Override
+  public Optional<E> edgeConnecting(Object nodeU, Object nodeV) {
+    Set<E> edgesConnecting = edgesConnecting(nodeU, nodeV);
+    switch (edgesConnecting.size()) {
+      case 0:
+        return Optional.absent();
+      case 1:
+        return Optional.of(edgesConnecting.iterator().next());
+      default:
+        throw new IllegalArgumentException(String.format(MULTIPLE_EDGES_CONNECTING, nodeU, nodeV));
+    }
+  }
+
+  @Override
+  public final boolean equals(@Nullable Object obj) {
     if (obj == this) {
       return true;
     }
@@ -127,51 +175,35 @@ public abstract class AbstractNetwork<N, E> implements Network<N, E> {
     }
     Network<?, ?> other = (Network<?, ?>) obj;
 
-    if (isDirected() != other.isDirected()) {
-      return false;
-    }
-
-    if (!nodes().equals(other.nodes()) || !edges().equals(other.edges())) {
-      return false;
-    }
-
-    for (E edge : edges()) {
-      if (!incidentNodes(edge).equals(other.incidentNodes(edge))) {
-        return false;
-      }
-    }
-
-    return true;
+    return isDirected() == other.isDirected()
+        && nodes().equals(other.nodes())
+        && edgeIncidentNodesMap(this).equals(edgeIncidentNodesMap(other));
   }
 
   @Override
-  public int hashCode() {
-    Function<N, Set<E>> nodeToOutEdges = new Function<N, Set<E>>() {
-      @Override
-      public Set<E> apply(N node) {
-        return outEdges(node);
-      }
-    };
-    return Maps.asMap(nodes(), nodeToOutEdges).hashCode();
+  public final int hashCode() {
+    return edgeIncidentNodesMap(this).hashCode();
   }
 
-  /**
-   * Returns a string representation of this network.
-   */
+  /** Returns a string representation of this network. */
   @Override
   public String toString() {
-    String propertiesString = String.format(
-        "isDirected: %s, allowsParallelEdges: %s, allowsSelfLoops: %s",
-        isDirected(), allowsParallelEdges(), allowsSelfLoops());
-    Function<E, Endpoints<N>> edgeToEndpointsFn = new Function<E, Endpoints<N>>() {
-      @Override
-      public Endpoints<N> apply(E edge) {
-        return incidentNodes(edge);
-      }
-    };
-    return String.format(GRAPH_STRING_FORMAT,
-        propertiesString,
-        nodes(),
-        Maps.asMap(edges(), edgeToEndpointsFn));
+    String propertiesString =
+        String.format(
+            "isDirected: %s, allowsParallelEdges: %s, allowsSelfLoops: %s",
+            isDirected(), allowsParallelEdges(), allowsSelfLoops());
+    return String.format(
+        GRAPH_STRING_FORMAT, propertiesString, nodes(), edgeIncidentNodesMap(this));
+  }
+
+  private static <N, E> Map<E, EndpointPair<N>> edgeIncidentNodesMap(final Network<N, E> network) {
+    Function<E, EndpointPair<N>> edgeToIncidentNodesFn =
+        new Function<E, EndpointPair<N>>() {
+          @Override
+          public EndpointPair<N> apply(E edge) {
+            return network.incidentNodes(edge);
+          }
+        };
+    return Maps.asMap(network.edges(), edgeToIncidentNodesFn);
   }
 }

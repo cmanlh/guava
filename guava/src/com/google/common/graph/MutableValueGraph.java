@@ -18,10 +18,11 @@ package com.google.common.graph;
 
 import com.google.common.annotations.Beta;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.errorprone.annotations.CompatibleWith;
 
 /**
- * A subtype of {@link ValueGraph} which permits mutations.
- * Users should generally use the {@link ValueGraph} interface where possible.
+ * A subinterface of {@link ValueGraph} which adds mutation methods. When mutation is not required,
+ * users should prefer the {@link ValueGraph} interface.
  *
  * @author James Sexton
  * @param <N> Node parameter type
@@ -36,44 +37,45 @@ public interface MutableValueGraph<N, V> extends ValueGraph<N, V> {
    *
    * <p><b>Nodes must be unique</b>, just as {@code Map} keys must be. They must also be non-null.
    *
-   * @return {@code true} iff the graph was modified as a result of this call
+   * @return {@code true} if the graph was modified as a result of this call
    */
   @CanIgnoreReturnValue
   boolean addNode(N node);
 
   /**
-   * Adds an edge connecting {@code nodeA} to {@code nodeB} if one is not already present.
-   * Associates {@code value} with that edge (as returned by {@link #edgeValue(Object, Object)}).
+   * Adds an edge connecting {@code nodeU} to {@code nodeV} if one is not already present; associate
+   * that edge with {@code value}. In an undirected graph, the edge will also connect {@code nodeV}
+   * to {@code nodeU}.
    *
    * <p>Values do not have to be unique. However, values must be non-null.
    *
-   * <p>Behavior if {@code nodeA} and {@code nodeB} are not already present in this graph is
+   * <p>Behavior if {@code nodeU} and {@code nodeV} are not already present in this graph is
    * implementation-dependent. Suggested behaviors include (a) silently {@link #addNode(Object)
-   * adding} {@code nodeA} and {@code nodeB} to the graph (this is the behavior of the default
+   * adding} {@code nodeU} and {@code nodeV} to the graph (this is the behavior of the default
    * implementations) or (b) throwing {@code IllegalArgumentException}.
    *
-   * @return the value previously associated with the edge connecting {@code nodeA} to
-   *     {@code nodeB}, or null if there was no edge.
-   * @throws IllegalArgumentException if the introduction of the edge would violate
-   *     {@link #allowsSelfLoops()}
+   * @return the value previously associated with the edge connecting {@code nodeU} to {@code
+   *     nodeV}, or null if there was no such edge.
+   * @throws IllegalArgumentException if the introduction of the edge would violate {@link
+   *     #allowsSelfLoops()}
    */
   @CanIgnoreReturnValue
-  V putEdgeValue(N nodeA, N nodeB, V value);
+  V putEdgeValue(N nodeU, N nodeV, V value);
 
   /**
    * Removes {@code node} if it is present; all edges incident to {@code node} will also be removed.
    *
-   * @return {@code true} iff the graph was modified as a result of this call
+   * @return {@code true} if the graph was modified as a result of this call
    */
   @CanIgnoreReturnValue
-  boolean removeNode(Object node);
+  boolean removeNode(@CompatibleWith("N") Object node);
 
   /**
-   * Removes the edge connecting {@code nodeA} to {@code nodeB}, if it is present.
+   * Removes the edge connecting {@code nodeU} to {@code nodeV}, if it is present.
    *
-   * @return the value previously associated with the edge connecting {@code nodeA} to
-   *     {@code nodeB}, or null if there was no edge.
+   * @return the value previously associated with the edge connecting {@code nodeU} to {@code
+   *     nodeV}, or null if there was no such edge.
    */
   @CanIgnoreReturnValue
-  V removeEdge(Object nodeA, Object nodeB);
+  V removeEdge(@CompatibleWith("N") Object nodeU, @CompatibleWith("N") Object nodeV);
 }
